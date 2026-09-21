@@ -1,13 +1,11 @@
-name: Build
+name: Build and Deploy
 
 on:
   push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
+    branches: ["main"]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,6 +15,7 @@ jobs:
       # -------------------------
       # Backend
       # -------------------------
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -33,6 +32,7 @@ jobs:
       # -------------------------
       # Frontend
       # -------------------------
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -51,8 +51,88 @@ jobs:
       # -------------------------
       # Docker
       # -------------------------
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build backend Docker image
-        run: docker build -t netline-backend:latest ./backend
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --tag netline-backend:latest \
+            --load \
+            ./backend
 
       - name: Build frontend Docker image
-        run: docker build -t netline-frontend:latest ./frontend
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --tag netline-frontend:latest \
+            --load \
+            ./frontend
+
+      # -------------------------
+      # Export images
+      # -------------------------
+
+      - name: Save Docker images
+        run: |
+          docker save netline-backend:latest | gzip > netline-backend.tar.gz
+          docker save netline-frontend:latest | gzip > netline-frontend.tar.gz
+
+      # -------------------------
+      # SSH setup
+      # -------------------------
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.PI_SSH_KEY }}" > ~/.ssh/netline_deploy
+          chmod 600 ~/.ssh/netline_deploy
+
+          ssh-keyscan -H "${{ secrets.PI_HOST }}" >> ~/.ssh/known_hosts
+
+      # -------------------------
+      # Upload images
+      # -------------------------
+
+      - name: Upload Docker images
+        run: |
+          scp -i ~/.ssh/netline_deploy \
+            netline-backend.tar.gz \
+            ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }}:/home/${{ secrets.PI_USER }}/netline-chat/
+
+          scp -i ~/.ssh/netline_deploy \
+            netline-frontend.tar.gz \
+            ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }}:/home/${{ secrets.PI_USER }}/netline-chat/
+
+      # -------------------------
+      # Deploy
+      # -------------------------
+
+      - name: Deploy to Raspberry Pi
+        run: |
+          ssh -i ~/.ssh/netline_deploy \
+            ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }} << 'EOF'
+
+            set -e
+
+            cd ~/netline-chat
+
+            echo "Loading backend image..."
+            gunzip -c netline-backend.tar.gz | docker load
+
+            echo "Loading frontend image..."
+            gunzip -c netline-frontend.tar.gz | docker load
+
+            echo "Restarting containers..."
+            docker compose up -d
+
+            echo "Cleaning uploaded archives..."
+            rm -f netline-backend.tar.gz
+            rm -f netline-frontend.tar.gz
+
+            echo "Deployment complete."
+
+          EOF
