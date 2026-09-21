@@ -9,11 +9,6 @@ const ASCII_ART =
 |____/_/   \\_\\_| \\_\\_|\\_\\_|  |_|\\___/|____/|_____|`
 
 const BOOT_LINES = [
-  { cls: 'dim', text: '$ netline --connect ghost_09' },
-  { cls: 'ok', text: '[ok] handshake accepted' },
-  { cls: 'ok', text: '[ok] AES-256 keys exchanged' },
-  { cls: 'dim', text: '[....] mounting relay ch.7' },
-  { cls: 'ok', text: '[ok] relay online' },
   { cls: '', text: '> Welcome DarkMode Team' },
 ]
 
@@ -23,12 +18,10 @@ function TerminalBubble({ count }) {
   return (
     <div className="bubble">
       <pre className="ascii">{ASCII_ART}</pre>
-      {BOOT_LINES.slice(0, count).map((l, i) => (
-        <div key={i} className={l.cls || undefined}>
-          {l.text}
-          {i === count - 1 && count < BOOT_LINES.length && <span className="cursor" />}
+        <div >
+          "Welcome DarkMode Team"
+          <span className="cursor" />
         </div>
-      ))}
     </div>
   )
 }

@@ -38,6 +38,24 @@ dotnet run
 
 By default it listens on the ports printed in the console (e.g. `http://localhost:5000` / `https://localhost:5001` — check the terminal output, .NET picks these per machine).
 
+## Project structure
+
+```
+netline-backend/
+├── Program.cs                  # App configuration only: services, CORS, HttpClient, DI, pipeline
+├── Endpoints/
+│   └── ChatEndpoints.cs        # Route mapping (/api/chat, /api/health) — no HTTP-call logic
+├── Services/
+│   ├── IClaudeService.cs       # Contract + result type for talking to Claude
+│   └── ClaudeService.cs        # The actual POST call to the Anthropic /v1/messages API
+├── Models/
+│   └── ChatModels.cs           # Request/response DTOs
+├── appsettings.json
+└── NetlineBackend.csproj
+```
+
+If you need to change the persona system prompt, the model name, or how the request to Claude is built, that all lives in `Services/ClaudeService.cs`. Route shape and status-code handling live in `Endpoints/ChatEndpoints.cs`. `Program.cs` stays limited to wiring things together.
+
 ## 3. API contract
 
 **POST `/api/chat`**
