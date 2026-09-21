@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import MatrixRain from './MatrixRain.jsx'
 
 const ASCII_ART =
 ` ____    _    ____  _  ____  __  ___  ____  _____ 
@@ -94,7 +95,9 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <>
+      <MatrixRain />
+      <div className="app">
       <div className="head">
         <div className="brand">
           <span className="dot" />
@@ -144,6 +147,7 @@ export default function App() {
           SEND
         </button>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
