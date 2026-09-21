@@ -16,14 +16,7 @@ const BOOT_LINES = [
   { cls: '', text: '> Welcome DarkMode Team' },
 ]
 
-const REPLIES = [
-  "signal's clean on my end. go ahead.",
-  'that checks out. rerouting through node 7 now.',
-  "careful — this line isn't as private as it looks.",
-  'copy that. give me a second to pull the logs.',
-  'interesting. the corp servers went quiet right after you said that.',
-  'noted. anything else before I go dark?',
-]
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/chat'
 
 function TerminalBubble({ count }) {
   return (
@@ -68,18 +61,36 @@ export default function App() {
     return () => clearTimeout(t)
   }, [bootCount])
 
-  function send() {
+  async function send() {
     const text = draft.trim()
     if (!text) return
     const id = Date.now()
-    setMessages((m) => [...m, { id, from: 'me', who: 'YOU', text }])
+    const nextMessages = [...messages, { id, from: 'me', who: 'YOU', text }]
+    setMessages(nextMessages)
     setDraft('')
     setTyping(true)
-    setTimeout(() => {
+
+    const history = nextMessages
+      .filter((m) => m.from === 'me' || m.from === 'them')
+      .map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', content: m.text }))
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history }),
+      })
+      if (!res.ok) throw new Error(`backend returned ${res.status}`)
+      const data = await res.json()
       setTyping(false)
-      const reply = REPLIES[Math.floor(Math.random() * REPLIES.length)]
-      setMessages((m) => [...m, { id: id + 1, from: 'them', who: 'GHOST_09', text: reply }])
-    }, 700 + Math.random() * 900)
+      setMessages((m) => [...m, { id: id + 1, from: 'them', who: 'GHOST_09', text: data.reply }])
+    } catch (err) {
+      setTyping(false)
+      setMessages((m) => [
+        ...m,
+        { id: id + 1, from: 'them', who: 'GHOST_09', text: '[connection lost — check the backend and try again]' },
+      ])
+    }
   }
 
   return (
