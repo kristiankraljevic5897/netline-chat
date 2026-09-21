@@ -3,3 +3,6 @@ out
 build
 node_modules
 .angular
+
+backend/bin/
+backend/obj/
